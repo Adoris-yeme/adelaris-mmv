@@ -4,7 +4,7 @@ import type { Modele } from '../types';
 import { compressImage } from '../utils/image';
 
 interface AddModelFormProps {
-    onSaveModel: (model: Omit<Modele, 'atelierId' | 'atelierName' | 'showcaseStatus'> & { id: string });
+    onSaveModel: (model: Omit<Modele, 'atelierId' | 'atelierName' | 'showcaseStatus'> & { id: string }) => void;
     onCancel: () => void;
     modelToEdit?: Modele | null;
 }
