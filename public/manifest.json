@@ -1,0 +1,16 @@
+{
+  "name": "MMV COUTURE",
+  "short_name": "MMV",
+  "description": "An application for African tailors and stylists to manage a catalog of designs, follow sewing tutorials, and maintain a client registry with measurements and reminders.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfaf7",
+  "theme_color": "#78350f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
