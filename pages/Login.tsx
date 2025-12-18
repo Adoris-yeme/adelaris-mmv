@@ -10,15 +10,18 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const success = login(email, password);
-        if (!success) {
-            setError('Email ou mot de passe incorrect.');
-        }
+
+        setIsLoading(true);
+        const success = await login(email, password);
+        setIsLoading(false);
+
+        if (!success) setError('Email ou mot de passe incorrect.');
     };
 
     return (
@@ -50,7 +53,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                         />
                     </div>
                     {error && <p className="text-sm text-red-500">{error}</p>}
-                    <button type="submit" className="w-full py-3 px-4 text-sm font-medium text-white bg-orange-900 rounded-md hover:bg-orange-800 transition-colors">
+                    <button type="submit" disabled={isLoading} className="w-full py-3 px-4 text-sm font-medium text-white bg-orange-900 rounded-md hover:bg-orange-800 transition-colors disabled:opacity-60">
                         Se connecter
                     </button>
                 </form>

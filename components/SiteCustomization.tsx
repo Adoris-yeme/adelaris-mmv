@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import type { SiteContent, PageBlock, BlockType } from '../types';
 import { compressImage } from '../utils/image';
@@ -193,20 +193,31 @@ const CTAEditor: React.FC<{ block: any, onChange: (b: any) => void }> = ({ block
 
 const SiteCustomization: React.FC = () => {
     const { getSiteContent, updateSiteContent } = useAuth();
-    
-    // Initialize content, ensuring blocks array exists even if missing in legacy data
-    const [content, setContent] = useState<SiteContent>(() => {
-        const c = getSiteContent();
-        return { ...c, blocks: c.blocks || [] };
-    });
+
+    const [content, setContent] = useState<SiteContent | null>(null);
     
     const [isSaving, setIsSaving] = useState(false);
     const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
     const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null);
 
-    const handleSave = () => {
+    useEffect(() => {
+        let mounted = true;
+        getSiteContent()
+            .then((c) => {
+                if (!mounted) return;
+                setContent({ ...c, blocks: c.blocks || [] });
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setContent({ hero: { imageUrl: '', backgroundPosition: 'center', title: '', subtitle: '' }, segments: [], stats: [], blocks: [] });
+            });
+        return () => { mounted = false; };
+    }, [getSiteContent]);
+
+    const handleSave = async () => {
+        if (!content) return;
         setIsSaving(true);
-        updateSiteContent(content);
+        await updateSiteContent(content);
         setTimeout(() => setIsSaving(false), 1000);
     };
 
@@ -256,6 +267,7 @@ const SiteCustomization: React.FC = () => {
     };
 
     const moveBlock = (index: number, direction: 'up' | 'down') => {
+        if (!content) return;
         const newBlocks = [...content.blocks];
         if (direction === 'up' && index > 0) {
             [newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]];
@@ -264,6 +276,8 @@ const SiteCustomization: React.FC = () => {
         }
         setContent(prev => ({ ...prev, blocks: newBlocks }));
     };
+
+    if (!content) return <div>Chargement...</div>;
 
     return (
         <div className="space-y-8">

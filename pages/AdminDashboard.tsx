@@ -32,8 +32,8 @@ type AdminPage = 'ateliers' | 'showroom' | 'customization';
 const AdminDashboard: React.FC = () => {
     const { getAllAteliersWithManager, updateSubscription, logout, impersonate, getPendingShowcaseModels, updateShowcaseStatus } = useAuth();
     
-    const [ateliers, setAteliers] = useState<AtelierWithManager[]>(getAllAteliersWithManager());
-    const [pendingModels, setPendingModels] = useState<Modele[]>(getPendingShowcaseModels());
+    const [ateliers, setAteliers] = useState<AtelierWithManager[]>([]);
+    const [pendingModels, setPendingModels] = useState<Modele[]>([]);
     const [currentPage, setCurrentPage] = useState<AdminPage>('ateliers');
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -43,33 +43,50 @@ const AdminDashboard: React.FC = () => {
     const [notification, setNotification] = useState('');
 
     useEffect(() => {
+        let mounted = true;
+        Promise.all([getAllAteliersWithManager(), getPendingShowcaseModels()])
+            .then(([a, m]) => {
+                if (!mounted) return;
+                setAteliers(a);
+                setPendingModels(m);
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setAteliers([]);
+                setPendingModels([]);
+            });
+        return () => { mounted = false; };
+    }, [getAllAteliersWithManager, getPendingShowcaseModels]);
+
+    useEffect(() => {
         if (notification) {
             const timer = setTimeout(() => setNotification(''), 3000);
             return () => clearTimeout(timer);
         }
     }, [notification]);
     
-    const refreshData = () => {
-        setAteliers(getAllAteliersWithManager());
-        setPendingModels(getPendingShowcaseModels());
+    const refreshData = async () => {
+        const [a, m] = await Promise.all([getAllAteliersWithManager(), getPendingShowcaseModels()]);
+        setAteliers(a);
+        setPendingModels(m);
     };
 
-    const handleUpdate = (atelier: AtelierWithManager, status: SubscriptionStatus, duration?: number) => {
-        updateSubscription(atelier.id, status, duration);
-        refreshData();
+    const handleUpdate = async (atelier: AtelierWithManager, status: SubscriptionStatus, duration?: number) => {
+        await updateSubscription(atelier.id, status, duration);
+        await refreshData();
         setNotification(`Abonnement de "${atelier.name}" mis à jour.`);
     };
     
-    const handleConfirmDeactivation = () => {
+    const handleConfirmDeactivation = async () => {
         if (atelierToDeactivate) {
-            handleUpdate(atelierToDeactivate, 'inactive');
+            await handleUpdate(atelierToDeactivate, 'inactive');
             setAtelierToDeactivate(null);
         }
     };
 
-    const handleShowcaseUpdate = (modelId: string, status: ShowcaseStatus) => {
-        updateShowcaseStatus(modelId, status);
-        refreshData();
+    const handleShowcaseUpdate = async (modelId: string, status: ShowcaseStatus) => {
+        await updateShowcaseStatus(modelId, status);
+        await refreshData();
         setNotification(`Statut du modèle mis à jour.`);
     };
     

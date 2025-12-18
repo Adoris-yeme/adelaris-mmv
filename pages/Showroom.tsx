@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import type { Modele } from '../types';
 import ModelCard from '../components/ModelCard';
@@ -10,7 +10,18 @@ const EVENT_OPTIONS: (Modele['event'] | 'Tous')[] = ['Tous', 'Quotidien', 'CÃ©rÃ
 
 const Showroom: React.FC = () => {
     const { getShowcaseModels, registerClientAndOrderFromShowroom } = useAuth();
-    const [models] = useState<Modele[]>(getShowcaseModels());
+    const [models, setModels] = useState<Modele[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+        setIsLoading(true);
+        getShowcaseModels()
+            .then((m) => { if (mounted) setModels(m); })
+            .catch(() => { if (mounted) setModels([]); })
+            .finally(() => { if (mounted) setIsLoading(false); });
+        return () => { mounted = false; };
+    }, [getShowcaseModels]);
     
     const [searchQuery, setSearchQuery] = useState('');
     const [genreFilter, setGenreFilter] = useState('Tous');
@@ -60,6 +71,9 @@ const Showroom: React.FC = () => {
                 </div>
             </div>
 
+            {isLoading ? (
+                <div>Chargement...</div>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredModels.map(model => (
                     <div key={model.id} className="relative group">
@@ -76,6 +90,7 @@ const Showroom: React.FC = () => {
                     </div>
                 ))}
             </div>
+            )}
 
             {orderingModel && (
                 <ShowroomOrderModal

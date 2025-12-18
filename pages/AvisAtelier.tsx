@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import type { Review } from '../types';
 
@@ -19,21 +19,37 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 };
 
 const AvisAtelier: React.FC = () => {
-    const { getReviews, atelier, updateAtelierData } = useAuth();
-    const [reviews, setReviews] = useState<Review[]>(getReviews().filter(r => r.atelierId === atelier?.id));
+    const { getReviews, respondToReview, atelier } = useAuth();
+    const [reviews, setReviews] = useState<Review[]>([]);
     const [respondingTo, setRespondingTo] = useState<string | null>(null);
     const [responseText, setResponseText] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleRespond = (reviewId: string) => {
-        // In a real app, this would call an API to update the review
-        // Here we just update local state simulation
-        const updatedReviews = reviews.map(r => 
-            r.id === reviewId ? { ...r, response: responseText } : r
-        );
-        setReviews(updatedReviews);
+    useEffect(() => {
+        if (!atelier) return;
+        let mounted = true;
+        setIsLoading(true);
+        getReviews()
+            .then((r) => {
+                if (!mounted) return;
+                setReviews(r.filter(x => x.atelierId === atelier.id));
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setReviews([]);
+            })
+            .finally(() => {
+                if (!mounted) return;
+                setIsLoading(false);
+            });
+        return () => { mounted = false; };
+    }, [atelier, getReviews]);
+
+    const handleRespond = async (reviewId: string) => {
+        await respondToReview(reviewId, responseText);
+        setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, response: responseText } : r));
         setRespondingTo(null);
         setResponseText('');
-        alert("Réponse envoyée (Simulation)");
     };
 
     if (!atelier) return null;
@@ -46,6 +62,7 @@ const AvisAtelier: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+                {isLoading && <div>Chargement...</div>}
                 {reviews.length > 0 ? (
                     reviews.map(review => (
                         <div key={review.id} className="bg-white dark:bg-stone-800 p-6 rounded-lg shadow-md">

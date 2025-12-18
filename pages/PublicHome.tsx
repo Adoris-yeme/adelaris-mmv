@@ -1,6 +1,6 @@
 
-import React from 'react';
-import type { Page, HomepageSegment, HomepageStat, PageBlock, HeroBlock, ContentBlock, FeaturesBlock, StatsBlock, CTABlock } from '../types';
+import React, { useEffect, useState } from 'react';
+import type { Page, HomepageSegment, HomepageStat, PageBlock, HeroBlock, ContentBlock, FeaturesBlock, StatsBlock, CTABlock, SiteContent } from '../types';
 import { useAuth } from '../auth/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { StarIcon, ClientsIcon, PatternIcon, DashboardIcon } from '../components/icons';
@@ -147,7 +147,18 @@ const CTASection: React.FC<{ block: CTABlock, onNavigate: (page: Page) => void }
 const PublicHome: React.FC<PublicHomeProps> = ({ onNavigate }) => {
     const { getSiteContent } = useAuth();
     const { t } = useLanguage();
-    const content = getSiteContent();
+    const [content, setContent] = useState<SiteContent | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        getSiteContent()
+            .then((c) => { if (mounted) setContent(c); })
+            .catch(() => { if (mounted) setContent({ hero: { imageUrl: '', backgroundPosition: 'center', title: '', subtitle: '' }, segments: [], stats: [], blocks: [] }); });
+        return () => { mounted = false; };
+    }, [getSiteContent]);
+
+    if (!content) return <div className="container mx-auto px-4 max-w-7xl pt-8">Chargement...</div>;
+
     const blocks = content.blocks || [];
 
     // Fallback logic for legacy data structure (Hero + Segments + Stats)

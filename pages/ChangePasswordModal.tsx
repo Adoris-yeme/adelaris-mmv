@@ -12,8 +12,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -27,7 +28,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
             return;
         }
 
-        const result = changePassword(user.id, currentPassword, newPassword);
+        setIsLoading(true);
+        const result = await changePassword(user.id, currentPassword, newPassword);
+        setIsLoading(false);
 
         if (result.success) {
             setSuccess(result.message);
@@ -78,7 +81,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
                     {success && <p className="text-sm text-green-500">{success}</p>}
                     <div className="flex justify-end gap-4 pt-4">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium bg-stone-100 dark:bg-stone-700 rounded-md hover:bg-stone-200">Annuler</button>
-                        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-orange-900 rounded-md hover:bg-orange-800">Mettre à jour</button>
+                        <button type="submit" disabled={isLoading} className="px-4 py-2 text-sm font-medium text-white bg-orange-900 rounded-md hover:bg-orange-800 disabled:opacity-60">Mettre à jour</button>
                     </div>
                 </form>
             </div>

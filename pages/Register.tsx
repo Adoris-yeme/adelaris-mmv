@@ -28,6 +28,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('trial'); // Default to trial
     const [withDemoData, setWithDemoData] = useState(true);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     
     const { register } = useAuth();
 
@@ -57,21 +58,21 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
         setStep(prev => prev - 1);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (step < 4) {
             handleNext();
             return;
         }
         setError('');
-        const success = register(atelierName, email, password, withDemoData, atelierType, specialization, employeeCount, selectedPlan);
-        if (!success) {
-            setError('Un utilisateur avec cet email existe déjà.');
-        }
+        setIsLoading(true);
+        const success = await register(atelierName, email, password, withDemoData, atelierType, specialization, employeeCount, selectedPlan);
+        setIsLoading(false);
+        if (!success) setError('Un utilisateur avec cet email existe déjà.');
         // On success, AuthProvider redirects
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = async (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             if (step < 4) {
@@ -80,10 +81,10 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                 // Manually trigger submit for the last step
                 const event = new Event('submit', { cancelable: true });
                 // We just call the logic directly since creating synthetic events is messy here
-                const success = register(atelierName, email, password, withDemoData, atelierType, specialization, employeeCount, selectedPlan);
-                if (!success) {
-                    setError('Un utilisateur avec cet email existe déjà.');
-                }
+                setIsLoading(true);
+                const success = await register(atelierName, email, password, withDemoData, atelierType, specialization, employeeCount, selectedPlan);
+                setIsLoading(false);
+                if (!success) setError('Un utilisateur avec cet email existe déjà.');
             }
         }
     };
@@ -286,7 +287,8 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                             ) : (
                                 <button
                                     type="submit"
-                                    className="px-8 py-3 rounded-lg bg-gradient-to-r from-orange-700 to-orange-900 text-white font-bold hover:from-orange-800 hover:to-orange-950 shadow-lg transform hover:scale-[1.02] transition-all flex items-center gap-2"
+                                    disabled={isLoading}
+                                    className="px-8 py-3 rounded-lg bg-gradient-to-r from-orange-700 to-orange-900 text-white font-bold hover:from-orange-800 hover:to-orange-950 shadow-lg transform hover:scale-[1.02] transition-all flex items-center gap-2 disabled:opacity-60"
                                 >
                                     Créer mon Atelier
                                 </button>

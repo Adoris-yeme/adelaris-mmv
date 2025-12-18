@@ -22,8 +22,9 @@ const StarRating: React.FC<{ rating: number; setRating?: (rating: number) => voi
 
 const Reviews: React.FC = () => {
     const { getReviews, addReview, getAllAteliersWithManager } = useAuth();
-    const [reviews, setReviews] = useState<Review[]>(getReviews());
-    const [ateliers] = useState<AtelierWithManager[]>(getAllAteliersWithManager());
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [ateliers, setAteliers] = useState<AtelierWithManager[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [author, setAuthor] = useState('');
     const [content, setContent] = useState('');
@@ -36,7 +37,29 @@ const Reviews: React.FC = () => {
     const [cursorPosition, setCursorPosition] = useState(0);
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        let mounted = true;
+        setIsLoading(true);
+        Promise.all([getReviews(), getAllAteliersWithManager()])
+            .then(([r, a]) => {
+                if (!mounted) return;
+                setReviews(r);
+                setAteliers(a);
+            })
+            .catch(() => {
+                if (!mounted) return;
+                setReviews([]);
+                setAteliers([]);
+            })
+            .finally(() => {
+                if (!mounted) return;
+                setIsLoading(false);
+            });
+
+        return () => { mounted = false; };
+    }, [getReviews, getAllAteliersWithManager]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!author || !content || rating === 0) {
             alert("Veuillez remplir tous les champs et donner une note.");
@@ -56,8 +79,9 @@ const Reviews: React.FC = () => {
             reviewData.atelierName = atelier?.name;
         }
 
-        addReview(reviewData);
-        setReviews(getReviews()); // Refresh list
+        await addReview(reviewData);
+        const refreshed = await getReviews();
+        setReviews(refreshed);
 
         // Reset form
         setAuthor('');
@@ -161,6 +185,7 @@ const Reviews: React.FC = () => {
 
             <div className="lg:col-span-2 space-y-4">
                  <h2 className="text-2xl font-bold text-stone-800 dark:text-stone-100">Ce que nos utilisateurs disent</h2>
+                {isLoading && <div>Chargement...</div>}
                 {reviews.map(review => (
                     <div key={review.id} className="bg-white dark:bg-stone-800/50 p-5 rounded-lg shadow-sm">
                         <div className="flex justify-between items-start">
