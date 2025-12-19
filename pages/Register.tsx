@@ -46,7 +46,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
     }, [atelierName, atelierType, specialization, employeeCount]);
 
     useEffect(() => {
-        if (step !== 2) return;
+        if (step !== 1) return;
 
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
         const googleObj = (window as any).google;
@@ -178,6 +178,9 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                     {/* Step 1: Account */}
                     {step === 1 && (
                         <div className="space-y-4 animate-fade-in max-w-md mx-auto w-full">
+                            <div className="flex flex-col items-center">
+                                <div ref={googleButtonRef} />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Email Manager</label>
                                 <input
@@ -206,9 +209,6 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                     {/* Step 2: Identity */}
                     {step === 2 && (
                         <div className="space-y-4 animate-fade-in max-w-lg mx-auto w-full">
-                            <div className="flex flex-col items-center">
-                                <div ref={googleButtonRef} />
-                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Nom de l'atelier</label>
                                 <input
