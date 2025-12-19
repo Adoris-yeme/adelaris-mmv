@@ -134,7 +134,11 @@ const Gestion: React.FC<GestionProps> = ({ models, onAddModel, onUpdateModel, on
     };
 
     const handleSaveModel = (model: Omit<Modele, 'atelierId' | 'atelierName' | 'showcaseStatus'> & {id: string}) => {
-        if (!atelier) return;
+        if (!atelier) {
+            console.error('Erreur: atelier est null dans handleSaveModel');
+            alert('Erreur: Données de l\'atelier non chargées. Veuillez réessayer.');
+            return;
+        }
 
         if (selectedModel) { // Editing
              onUpdateModel({ ...selectedModel, ...model });
