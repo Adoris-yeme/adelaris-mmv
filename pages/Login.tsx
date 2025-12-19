@@ -11,12 +11,13 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
     const { login, googleLogin } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement | null>(null);
     const googleInitializedRef = useRef(false);
 
     useEffect(() => {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        const clientId = googleClientId;
         if (!clientId) return;
 
         let cancelled = false;
@@ -81,7 +82,13 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
                 <h2 className="text-3xl font-bold text-center text-stone-800 dark:text-stone-100 mb-2">Connexion</h2>
                 <p className="text-center text-stone-500 dark:text-stone-400 mb-6">Accédez à votre espace de travail.</p>
                 <div className="flex justify-center mb-4">
-                    <div ref={googleButtonRef} />
+                    {googleClientId ? (
+                        <div ref={googleButtonRef} />
+                    ) : (
+                        <div className="w-full max-w-[360px] border border-stone-300 dark:border-stone-600 rounded-md px-4 py-3 text-sm text-stone-600 dark:text-stone-300 bg-stone-50 dark:bg-stone-700">
+                            Connexion avec Google indisponible (VITE_GOOGLE_CLIENT_ID manquant).
+                        </div>
+                    )}
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>

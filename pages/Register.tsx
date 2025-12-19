@@ -29,6 +29,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
     const [withDemoData, setWithDemoData] = useState(true);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
     
     const { register, googleLogin } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement | null>(null);
@@ -48,7 +49,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
     useEffect(() => {
         if (step !== 1) return;
 
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        const clientId = googleClientId;
         if (!clientId) return;
 
         let cancelled = false;
@@ -199,7 +200,13 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                     {step === 1 && (
                         <div className="space-y-4 animate-fade-in max-w-md mx-auto w-full">
                             <div className="flex flex-col items-center">
-                                <div ref={googleButtonRef} />
+                                {googleClientId ? (
+                                    <div ref={googleButtonRef} />
+                                ) : (
+                                    <div className="w-full max-w-[360px] border border-stone-300 dark:border-stone-600 rounded-md px-4 py-3 text-sm text-stone-600 dark:text-stone-300 bg-stone-50 dark:bg-stone-700 text-center">
+                                        Inscription avec Google indisponible (VITE_GOOGLE_CLIENT_ID manquant).
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Email Manager</label>
