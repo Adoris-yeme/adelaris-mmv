@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import type { Page } from '../types';
 
@@ -11,7 +11,34 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, googleLogin } = useAuth();
+    const googleButtonRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        const googleObj = (window as any).google;
+
+        if (!clientId || !googleObj?.accounts?.id || !googleButtonRef.current) return;
+
+        googleObj.accounts.id.initialize({
+            client_id: clientId,
+            callback: async (response: { credential?: string }) => {
+                if (!response?.credential) {
+                    setError('Connexion Google impossible.');
+                    return;
+                }
+                setError('');
+                const success = await googleLogin(response.credential);
+                if (!success) setError('Connexion Google impossible.');
+            }
+        });
+
+        googleObj.accounts.id.renderButton(googleButtonRef.current, {
+            theme: 'outline',
+            size: 'large',
+            width: '360'
+        });
+    }, [googleLogin]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +56,9 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
             <div className="max-w-md w-full bg-white dark:bg-stone-800 p-8 rounded-lg shadow-lg">
                 <h2 className="text-3xl font-bold text-center text-stone-800 dark:text-stone-100 mb-2">Connexion</h2>
                 <p className="text-center text-stone-500 dark:text-stone-400 mb-6">Accédez à votre espace de travail.</p>
+                <div className="flex justify-center mb-4">
+                    <div ref={googleButtonRef} />
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-stone-700 dark:text-stone-300">Email</label>

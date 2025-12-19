@@ -52,6 +52,7 @@ interface AuthContextType {
     isSubscriptionActive: boolean;
     isImpersonating: boolean;
     login: (email: string, pass: string) => Promise<boolean>;
+    googleLogin: (credential: string, options?: { atelierName?: string; atelierType?: AtelierType; specialization?: Specialization; employeeCount?: number }) => Promise<boolean>;
     logout: () => void;
     register: (atelierName: string, email: string, pass: string, withDemoData: boolean, atelierType?: AtelierType, specialization?: Specialization, employeeCount?: number, initialPlan?: SubscriptionPlan) => Promise<boolean>;
     changePassword: (userId: string, oldPass: string, newPass: string) => Promise<{ success: boolean, message: string }>;
@@ -115,6 +116,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(result.user);
             setAtelier(result.atelier);
             localStorage.setItem('mmv_user', JSON.stringify(result.user));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }, []);
+
+    const googleLogin = useCallback(async (credential: string, options?: { atelierName?: string; atelierType?: AtelierType; specialization?: Specialization; employeeCount?: number }) => {
+        try {
+            const result = await apiRequest<{ user: User; atelier: Atelier | null }>(
+                '/api/auth/google',
+                { method: 'POST', body: JSON.stringify({ credential, ...(options || {}) }) }
+            );
+            setUser(result.user);
+            setAtelier(result.atelier);
+            localStorage.setItem('mmv_user', JSON.stringify(result.user));
+            if (result.atelier) {
+                localStorage.setItem('mmv_atelier', JSON.stringify(result.atelier));
+            }
             return true;
         } catch (e) {
             return false;
@@ -288,11 +307,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const value = useMemo(() => ({
         isAuthenticated, user, atelier, isSubscriptionActive, isImpersonating,
-        login, logout, register, changePassword, impersonate, stopImpersonating,
+        login, googleLogin, logout, register, changePassword, impersonate, stopImpersonating,
         getAllAteliersWithManager, updateSubscription, upgradeClientSubscription, updateAtelierData, resetAtelierData, updateManagerProfile,
         getShowcaseModels, getPendingShowcaseModels, updateShowcaseStatus, registerClientAndOrderFromShowroom,
         getReviews, addReview, respondToReview, getSiteContent, updateSiteContent
-    }), [isAuthenticated, user, atelier, isSubscriptionActive, isImpersonating, login, logout, register, changePassword, impersonate, stopImpersonating, getAllAteliersWithManager, updateSubscription, upgradeClientSubscription, updateAtelierData, resetAtelierData, updateManagerProfile, getShowcaseModels, getPendingShowcaseModels, updateShowcaseStatus, registerClientAndOrderFromShowroom, getReviews, addReview, respondToReview, getSiteContent, updateSiteContent]);
+    }), [isAuthenticated, user, atelier, isSubscriptionActive, isImpersonating, login, googleLogin, logout, register, changePassword, impersonate, stopImpersonating, getAllAteliersWithManager, updateSubscription, upgradeClientSubscription, updateAtelierData, resetAtelierData, updateManagerProfile, getShowcaseModels, getPendingShowcaseModels, updateShowcaseStatus, registerClientAndOrderFromShowroom, getReviews, addReview, respondToReview, getSiteContent, updateSiteContent]);
 
     return (
         <AuthContext.Provider value={value}>

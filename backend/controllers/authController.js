@@ -1,8 +1,12 @@
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Atelier = require('../models/Atelier');
 const { buildAtelierResponse } = require('../services/atelierSnapshot');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const createInitialData = (atelierName, options = {}) => ({
     clients: [], models: [], appointments: [], orders: [], workstations: [], 
@@ -49,6 +53,67 @@ exports.register = async (req, res) => {
 
         const atelier = await buildAtelierResponse(atelierId);
         res.status(201).json({ user: { id: user.id, email: user.email, role: user.role, atelierId: user.atelierId }, atelier });
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur serveur', error: error.message });
+    }
+};
+
+exports.googleAuth = async (req, res) => {
+    try {
+        const { credential, atelierName, atelierType, specialization, employeeCount } = req.body;
+
+        if (!credential) {
+            return res.status(400).json({ message: 'Champs requis manquants.' });
+        }
+
+        if (!process.env.GOOGLE_CLIENT_ID) {
+            return res.status(500).json({ message: 'Configuration Google manquante.' });
+        }
+
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const email = payload && payload.email;
+
+        if (!email) {
+            return res.status(401).json({ message: 'Identifiants incorrects' });
+        }
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            const userId = 'user-' + Date.now();
+            const atelierId = 'atelier-' + Date.now();
+            const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 jours
+
+            const suggestedAtelierName = atelierName || `Atelier ${email.split('@')[0]}`;
+            const initialData = createInitialData(suggestedAtelierName, { atelierType, specialization, employeeCount });
+
+            const randomPassword = crypto.randomBytes(32).toString('hex');
+            const salt = await bcrypt.genSalt(10);
+            const passwordHash = await bcrypt.hash(randomPassword, salt);
+
+            user = await User.create({ id: userId, email, passwordHash, role: 'manager', atelierId });
+
+            await Atelier.create({
+                id: atelierId,
+                name: suggestedAtelierName,
+                managerId: userId,
+                subscription: { status: 'trial', plan: 'premium', expiresAt },
+                managerProfile: initialData.managerProfile,
+                managerAccessCode: initialData.managerAccessCode,
+                modelOfTheMonthId: initialData.modelOfTheMonthId,
+                favoriteIds: initialData.favoriteIds,
+                isNew: initialData.isNew,
+                data: initialData
+            });
+        }
+
+        const atelier = user.atelierId ? await buildAtelierResponse(user.atelierId) : null;
+        res.json({ user: { id: user.id, email: user.email, role: user.role, atelierId: user.atelierId }, atelier });
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }

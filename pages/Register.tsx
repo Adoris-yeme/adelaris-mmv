@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import type { Page, AtelierType, Specialization, SubscriptionPlan } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
@@ -30,7 +30,59 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    const { register } = useAuth();
+    const { register, googleLogin } = useAuth();
+    const googleButtonRef = useRef<HTMLDivElement | null>(null);
+    const googleInitializedRef = useRef(false);
+    const atelierNameRef = useRef('');
+    const atelierTypeRef = useRef<AtelierType>('Atelier Couture');
+    const specializationRef = useRef<Specialization>('Dame');
+    const employeeCountRef = useRef<number>(0);
+
+    useEffect(() => {
+        atelierNameRef.current = atelierName;
+        atelierTypeRef.current = atelierType;
+        specializationRef.current = specialization;
+        employeeCountRef.current = employeeCount;
+    }, [atelierName, atelierType, specialization, employeeCount]);
+
+    useEffect(() => {
+        if (step !== 2) return;
+
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        const googleObj = (window as any).google;
+
+        if (!clientId || !googleObj?.accounts?.id || !googleButtonRef.current) return;
+
+        if (googleInitializedRef.current) return;
+        googleInitializedRef.current = true;
+
+        googleObj.accounts.id.initialize({
+            client_id: clientId,
+            callback: async (response: { credential?: string }) => {
+                if (!response?.credential) {
+                    setError("Inscription Google impossible.");
+                    return;
+                }
+
+                setIsLoading(true);
+                setError('');
+                const success = await googleLogin(response.credential, {
+                    atelierName: atelierNameRef.current,
+                    atelierType: atelierTypeRef.current,
+                    specialization: specializationRef.current,
+                    employeeCount: employeeCountRef.current
+                });
+                setIsLoading(false);
+                if (!success) setError("Inscription Google impossible.");
+            }
+        });
+
+        googleObj.accounts.id.renderButton(googleButtonRef.current, {
+            theme: 'outline',
+            size: 'large',
+            width: '360'
+        });
+    }, [googleLogin, step]);
 
     const handleNext = () => {
         if (step === 1) {
@@ -154,6 +206,9 @@ const Register: React.FC<RegisterProps> = ({ onNavigate }) => {
                     {/* Step 2: Identity */}
                     {step === 2 && (
                         <div className="space-y-4 animate-fade-in max-w-lg mx-auto w-full">
+                            <div className="flex flex-col items-center">
+                                <div ref={googleButtonRef} />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1">Nom de l'atelier</label>
                                 <input
