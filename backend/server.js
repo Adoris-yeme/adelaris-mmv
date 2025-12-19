@@ -22,7 +22,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/atelier', require('./routes/atelierRoutes'));
 app.use('/api/public', require('./routes/publicRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/admin', require('./middleware/auth').protect, require('./middleware/auth').restrictToSuperadmin, require('./routes/adminRoutes'));
 
 // Health Check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', architecture: 'MVC' }));
