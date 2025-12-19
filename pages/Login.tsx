@@ -13,31 +13,55 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { login, googleLogin } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement | null>(null);
+    const googleInitializedRef = useRef(false);
 
     useEffect(() => {
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-        const googleObj = (window as any).google;
+        if (!clientId) return;
 
-        if (!clientId || !googleObj?.accounts?.id || !googleButtonRef.current) return;
+        let cancelled = false;
+        const startedAt = Date.now();
+        const intervalId = window.setInterval(() => {
+            const googleObj = (window as any).google;
+            if (cancelled) return;
 
-        googleObj.accounts.id.initialize({
-            client_id: clientId,
-            callback: async (response: { credential?: string }) => {
-                if (!response?.credential) {
-                    setError('Connexion Google impossible.');
-                    return;
+            if (!googleObj?.accounts?.id || !googleButtonRef.current) {
+                if (Date.now() - startedAt > 8000) {
+                    window.clearInterval(intervalId);
                 }
-                setError('');
-                const success = await googleLogin(response.credential);
-                if (!success) setError('Connexion Google impossible.');
+                return;
             }
-        });
 
-        googleObj.accounts.id.renderButton(googleButtonRef.current, {
-            theme: 'outline',
-            size: 'large',
-            width: '360'
-        });
+            if (!googleInitializedRef.current) {
+                googleInitializedRef.current = true;
+                googleObj.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: async (response: { credential?: string }) => {
+                        if (!response?.credential) {
+                            setError('Connexion Google impossible.');
+                            return;
+                        }
+                        setError('');
+                        const success = await googleLogin(response.credential);
+                        if (!success) setError('Connexion Google impossible.');
+                    }
+                });
+            }
+
+            googleButtonRef.current.innerHTML = '';
+            googleObj.accounts.id.renderButton(googleButtonRef.current, {
+                theme: 'outline',
+                size: 'large',
+                width: '360'
+            });
+
+            window.clearInterval(intervalId);
+        }, 150);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+        };
     }, [googleLogin]);
 
     const handleSubmit = async (e: React.FormEvent) => {

@@ -43,6 +43,53 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ onSaveModel, onCancel, mode
         }
     }, [modelToEdit, isEditing]);
 
+    const normalizeImageUrl = (rawUrl: string) => {
+        const trimmed = rawUrl.trim();
+        let url: URL;
+        try {
+            url = new URL(trimmed);
+        } catch (e) {
+            return trimmed;
+        }
+
+        const host = url.hostname;
+        if (!host.includes('drive.google.com')) return trimmed;
+
+        const path = url.pathname;
+
+        const fileMatch = path.match(/^\/file\/d\/([^/]+)\//);
+        const idFromFile = fileMatch?.[1];
+        const idFromQuery = url.searchParams.get('id') || undefined;
+
+        const fileId = idFromFile || idFromQuery;
+        if (!fileId) return trimmed;
+
+        return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+    };
+
+    const canLoadImage = (src: string) => {
+        return new Promise<boolean>((resolve) => {
+            const img = new Image();
+            let done = false;
+            const finish = (ok: boolean) => {
+                if (done) return;
+                done = true;
+                resolve(ok);
+            };
+
+            const timeoutId = window.setTimeout(() => finish(false), 6000);
+            img.onload = () => {
+                window.clearTimeout(timeoutId);
+                finish(true);
+            };
+            img.onerror = () => {
+                window.clearTimeout(timeoutId);
+                finish(false);
+            };
+            img.src = src;
+        });
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setImageError('');
         const files = e.target.files;
@@ -66,17 +113,26 @@ const AddModelForm: React.FC<AddModelFormProps> = ({ onSaveModel, onCancel, mode
         setImagePreviews(prev => [...prev, ...newPreviews]);
     };
 
-    const handleAddImageLink = () => {
+    const handleAddImageLink = async () => {
         if (!imageLink) return;
-        // Basic URL validation
+        const normalized = normalizeImageUrl(imageLink);
+
         try {
-            new URL(imageLink);
-            setImagePreviews(prev => [...prev, imageLink]);
-            setImageLink('');
-            setImageError('');
+            new URL(normalized);
         } catch (e) {
             setImageError('Le lien fourni n\'est pas valide.');
+            return;
         }
+
+        const ok = await canLoadImage(normalized);
+        if (!ok) {
+            setImageError("Impossible d'afficher cette image. Si c'est un lien Google Drive, assurez-vous que le fichier est public et utilisez un lien de partage.");
+            return;
+        }
+
+        setImagePreviews(prev => [...prev, normalized]);
+        setImageLink('');
+        setImageError('');
     };
 
     const handleRemoveImage = (indexToRemove: number) => {
